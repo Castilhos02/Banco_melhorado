@@ -1,4 +1,5 @@
 🏦 Banco do Pobre
+
 Um projeto simulando operações bancárias básicas desenvolvido em Python, como parte do curso da Digital Innovation One (DIO). Este projeto explora conceitos fundamentais de programação, como estruturas de dados, funções, loops e manipulação de arquivos.
 
 📌 Funcionalidades
