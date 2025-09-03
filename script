@@ -1,0 +1,408 @@
+import json
+from decimal import Decimal
+from datetime import datetime
+import pytz
+import os
+
+# Funções auxiliares
+def carregar_json(nome_arquivo, default):
+    if os.path.exists(nome_arquivo):
+        with open(nome_arquivo, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                print(f"Arquivo corrompido: {nome_arquivo}")
+    return default
+
+def salvar_json(nome_arquivo, dados):
+    with open(nome_arquivo, "w") as f:
+        json.dump(dados, f, indent=4)
+
+# Obter data/hora com fuso
+def obter_data_hora(cidade):
+    fuso_map = {
+        "São Paulo": "America/Sao_Paulo",
+        "Rio de Janeiro": "America/Sao_Paulo",
+        "Manaus": "America/Manaus",
+        "Recife": "America/Recife",
+        "Porto Alegre": "America/Sao_Paulo" # Assuming same timezone as SP
+    }
+    # Get timezone from map, default to São Paulo if city not found
+    fuso = pytz.timezone(fuso_map.get(cidade, "America/Sao_Paulo"))
+    return datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
+
+# Cadastro de cliente
+def cadastrar_cliente():
+    print("\n--- 📝 Cadastro de Novo Cliente ---")
+    print("Por favor, insira seus dados para criar uma nova conta.")
+    cpf = input("➡️ CPF (somente números): ").strip()
+    nome = input("➡️ Nome completo: ").strip()
+    logradouro = input("➡️ Logradouro (rua, número, bairro): ").strip()
+    cidade = input("➡️ Cidade: ").strip()
+
+    clientes = carregar_json("clientes.json", {})
+    if cpf in clientes:
+        print("❌ Erro: Cliente com este CPF já está cadastrado em nosso sistema. Tente autenticar (Opção 2).")
+        return
+
+    clientes[cpf] = {
+        "nome": nome,
+        "logradouro": logradouro,
+        "cidade": cidade
+    }
+    salvar_json("clientes.json", clientes)
+    print("✅ Sucesso: Cliente cadastrado com sucesso! Agora você pode autenticar para acessar sua conta.")
+
+# Autenticação de cliente
+def autenticar_cliente():
+    """Autentica um cliente existente."""
+    print("\n--- 🔑 Autenticação de Cliente ---")
+    print("Por favor, digite seu CPF para acessar sua conta.")
+    cpf = input("➡️ CPF: ").strip()
+    clientes = carregar_json("clientes.json", {})
+    if cpf in clientes:
+        print(f"👋 Bem-vindo(a) de volta, {clientes[cpf]['nome']}! Autenticação bem-sucedida.")
+        return cpf
+    else:
+        print("❌ Erro: Cliente não encontrado. Verifique o CPF digitado ou cadastre-se (Opção 1).")
+        return None
+
+# Cadastro de conta bancária
+def cadastrar_conta(cpf):
+    """Cria uma nova conta bancária com um número único e sequencial para o cliente autenticado."""
+    print("\n--- 💳 Cadastro de Conta Bancária ---")
+    print("Estamos criando uma nova conta para você.")
+    contas = carregar_json("contas.json", {})
+    clientes = carregar_json("clientes.json", {})
+
+    # Generate a unique, sequential account number
+    last_account_number = "0000-00"
+    for acc_num in contas.keys():
+         if "-" in acc_num:
+              try:
+                  num_part = int(acc_num.split('-')[0])
+                  last_num_part = int(last_account_number.split('-')[0])
+                  if num_part > last_num_part:
+                      last_account_number = acc_num
+                  elif num_part == last_num_part:
+                      digit_part = int(acc_num.split('-')[1])
+                      last_digit_part = int(last_account_number.split('-')[1])
+                      if digit_part > last_digit_part:
+                           last_account_number = acc_num
+              except ValueError:
+                  pass
+
+    # Increment the last account number
+    try:
+        num_part, digit_part = map(int, last_account_number.split('-'))
+        if digit_part < 99:
+            digit_part += 1
+        else:
+            num_part += 1
+            digit_part = 1
+        novo_numero_conta = f"{num_part:04d}-{digit_part:02d}"
+    except ValueError:
+        novo_numero_conta = "0001-01"
+
+    # Ensure the generated number is actually unique
+    while novo_numero_conta in contas:
+         print(f"⚠️ Atenção: Número de conta {novo_numero_conta} já existe. Gerando próximo número...")
+         try:
+              num_part, digit_part = map(int, novo_numero_conta.split('-'))
+              if digit_part < 99:
+                  digit_part += 1
+              else:
+                  num_part += 1
+                  digit_part = 1
+              novo_numero_conta = f"{num_part:04d}-{digit_part:02d}"
+         except ValueError:
+              print("❌ Erro ao gerar novo número de conta. Saindo do cadastro.")
+              return
+
+
+    # Create the new account entry
+    contas[novo_numero_conta] = {
+        "cpf": cpf,
+        "saldo": str(Decimal(0)),
+        "extrato": [],
+        "saques_hoje": "0",
+        "last_saque_date": None # Placeholder for future daily limit reset
+    }
+
+    salvar_json("contas.json", contas)
+    print(f"✅ Sucesso: Conta bancária criada com sucesso! Seu novo número de conta é: ✨ {novo_numero_conta} ✨.")
+    print("Agora você pode acessar esta conta para realizar operações, como Depósitos e Saques.")
+
+# Selecionar conta existente
+def selecionar_conta(cpf):
+    """Permite que o cliente autenticado selecione uma de suas contas existentes."""
+    print("\n--- 🔑 Acessar Conta Existente ---")
+    contas = carregar_json("contas.json", {})
+
+    contas_do_cliente = {}
+    for conta_numero, dados_conta in contas.items():
+        if dados_conta.get("cpf") == cpf:
+            contas_do_cliente[conta_numero] = dados_conta
+
+    if not contas_do_cliente:
+        print("⚠️ Atenção: Você não possui nenhuma conta bancária associada a este CPF. Por favor, cadastre uma conta primeiro (Opção 1 no menu de contas).")
+        return None
+
+    print("Suas contas disponíveis:")
+    contas_list = sorted(contas_do_cliente.keys())
+    for i, conta_num in enumerate(contas_list):
+        saldo = Decimal(contas_do_cliente[conta_num].get("saldo", "0"))
+        print(f"{i + 1}. Conta: {conta_num} (Saldo: R$ {saldo:.2f})")
+
+    while True:
+        escolha_str = input("➡️ Digite o NÚMERO CORRESPONDENTE da conta que deseja acessar: ").strip()
+        try:
+            escolha_index = int(escolha_str) - 1
+            if 0 <= escolha_index < len(contas_list):
+                conta_selecionada = contas_list[escolha_index]
+                print(f"✅ Conta {conta_selecionada} selecionada com sucesso! Você pode começar a operar.")
+                return conta_selecionada
+            else:
+                print("❌ Erro: Número de conta inválido. Por favor, escolha um número da lista acima.")
+        except ValueError:
+            print("❌ Erro: Entrada inválida. Por favor, digite o número correspondente à conta.")
+
+# Realizar depósito
+def depositar(conta_numero):
+    """Permite que um cliente autenticado realize depósitos em sua conta."""
+    print("\n--- 💰 Realizar Depósito ---")
+    contas = carregar_json("contas.json", {})
+    clientes = carregar_json("clientes.json", {})
+
+    if conta_numero not in contas:
+        print("⚠️ Atenção: A conta bancária selecionada não foi encontrada.")
+        return
+
+    conta = contas[conta_numero]
+    cpf = conta.get("cpf")
+
+    if not cpf or cpf not in clientes:
+         print("❌ Erro: Informações do cliente associado à conta não encontradas.")
+         return
+
+    saldo_decimal = Decimal(conta["saldo"])
+
+    while True:
+        valor_str = input("➡️ Digite o valor que deseja depositar (somente números, use '.' para centavos, ex: 100.50): R$ ").strip().replace(",", ".")
+        try:
+            valor = Decimal(valor_str)
+            if valor <= 0:
+                print("❌ Erro: O valor do depósito deve ser positivo. Por favor, tente novamente.")
+            else:
+                break
+        except:
+            print("❌ Erro: Valor inválido. Por favor, digite um número válido para o depósito.")
+
+    novo_saldo = saldo_decimal + valor
+    conta["saldo"] = str(novo_saldo)
+
+    cidade_cliente = clientes.get(cpf, {}).get("cidade", "São Paulo")
+    data_hora = obter_data_hora(cidade_cliente)
+
+    conta["extrato"].append({"tipo": "Depósito", "valor": str(valor), "data_hora": data_hora})
+
+    salvar_json("contas.json", contas)
+    print(f"✅ Sucesso: Depósito de R$ {valor:.2f} realizado com sucesso na conta {conta_numero}!")
+    print(f"✨ Seu novo saldo é de R$ {novo_saldo:.2f}.")
+
+# Realizar saque
+def sacar(conta_numero):
+    """Permite que um cliente autenticado realize saques de sua conta."""
+    print("\n--- 💸 Realizar Saque ---")
+    contas = carregar_json("contas.json", {})
+    clientes = carregar_json("clientes.json", {})
+    limite_saque_diario = Decimal("500.00")
+
+    if conta_numero not in contas:
+        print("⚠️ Atenção: A conta bancária selecionada não foi encontrada.")
+        return
+
+    conta = contas[conta_numero]
+    cpf = conta.get("cpf")
+
+    if not cpf or cpf not in clientes:
+         print("❌ Erro: Informações do cliente associado à conta não encontradas.")
+         return
+
+    saldo_decimal = Decimal(conta["saldo"])
+    saques_hoje = Decimal(conta.get("saques_hoje", "0"))
+
+    # Basic daily reset (can be improved with date tracking)
+    # For this task, we'll just check the accumulated amount for today.
+    # A more robust solution would require storing the date of the last withdrawal.
+
+    print(f"ℹ️ Seu saldo atual é de R$ {saldo_decimal:.2f}.")
+    print(f"ℹ️ Limite de saque diário: R$ {limite_saque_diario:.2f}. Você já sacou R$ {saques_hoje:.2f} hoje.")
+    limite_restante = limite_saque_diario - saques_hoje
+    print(f"ℹ️ Limite restante para saque hoje: R$ {limite_restante:.2f}.")
+
+
+    while True:
+        valor_str = input(f"➡️ Digite o valor que deseja sacar (somente números, use '.' para centavos, até R$ {limite_restante:.2f}): R$ ").strip().replace(",", ".")
+        try:
+            valor = Decimal(valor_str)
+            if valor <= 0:
+                print("❌ Erro: O valor do saque deve ser positivo. Por favor, tente novamente.")
+            else:
+                break
+        except:
+            print("❌ Erro: Valor inválido. Por favor, digite um número válido para o saque.")
+
+    if valor > saldo_decimal:
+        print("❌ Erro: Saldo insuficiente. Você não possui fundos suficientes para realizar este saque.")
+        return
+
+    if valor > limite_restante:
+         print(f"❌ Erro: Valor excede o limite de saque diário restante. Você pode sacar no máximo R$ {limite_restante:.2f} hoje.")
+         return
+
+    novo_saldo = saldo_decimal - valor
+    conta["saldo"] = str(novo_saldo)
+
+    conta["saques_hoje"] = str(saques_hoje + valor)
+
+    cidade_cliente = clientes.get(cpf, {}).get("cidade", "São Paulo")
+    data_hora = obter_data_hora(cidade_cliente)
+
+    conta["extrato"].append({"tipo": "Saque", "valor": str(valor), "data_hora": data_hora})
+
+    salvar_json("contas.json", contas)
+    print(f"✅ Sucesso: Saque de R$ {valor:.2f} realizado com sucesso na conta {conta_numero}!")
+    print(f"✨ Seu novo saldo é de R$ {novo_saldo:.2f}.")
+
+# Visualizar extrato
+def visualizar_extrato(conta_numero):
+    """Exibe o histórico de transações (depósitos e saques) de um cliente autenticado."""
+    print("\n--- 📄 Extrato da Conta ---")
+    contas = carregar_json("contas.json", {})
+
+    if conta_numero not in contas:
+        print("⚠️ Atenção: A conta bancária selecionada não foi encontrada.")
+        return
+
+    conta = contas[conta_numero]
+    extrato = conta.get("extrato", [])
+
+    if not extrato:
+        print(f"🔎 Não há transações para exibir na conta {conta_numero} ainda.")
+    else:
+        print(f"📊 Histórico de Transações da Conta {conta_numero}:")
+        print("--------------------------------------------------")
+        for transacao in extrato:
+            tipo = transacao.get("tipo", "Desconhecido")
+            valor = transacao.get("valor", "N/A")
+            data_hora = transacao.get("data_hora", "N/A")
+            if tipo == "Depósito":
+                 print(f"🟢 {data_hora} | {tipo}: +R$ {Decimal(valor):.2f}")
+            elif tipo == "Saque":
+                 print(f"🔴 {data_hora} | {tipo}: -R$ {Decimal(valor):.2f}")
+            else:
+                 print(f"⚫ {data_hora} | {tipo}: R$ {Decimal(valor):.2f}")
+        print("--------------------------------------------------")
+
+    saldo_decimal = Decimal(conta.get("saldo", "0"))
+    print(f"✨ Saldo Atual da Conta {conta_numero}: R$ {saldo_decimal:.2f}")
+
+# Menus
+def exibir_menu_principal():
+    """Exibe o menu de opções antes da autenticação."""
+    print("\n===== Bem-vindo ao Banco do Pobre! =====")
+    print("Escolha uma opção abaixo:")
+    print("1. 📝 Cadastrar Novo Cliente")
+    print("2. 🔑 Já sou cliente! Autenticar")
+    print("3. 🚪 Sair do Sistema")
+    print("==========================================")
+    escolha = input("➡️ Digite o número da sua escolha: ").strip()
+    return escolha
+
+def exibir_menu_conta(nome_cliente):
+    """Exibe o menu de opções após a autenticação e solicita a escolha do usuário."""
+    print(f"\n===== Olá, {nome_cliente}! Gerenciar Contas =====")
+    print("Escolha uma opção para gerenciar suas contas:")
+    print("1. 💳 Cadastrar Nova Conta Bancária")
+    print("2. 🔑 Acessar Conta Existente")
+    print("6. ↩️ Voltar ao Menu Principal") # Moved to account menu
+    print("==========================================")
+    escolha = input("➡️ Digite o número da sua escolha: ").strip()
+    return escolha
+
+# Menu para conta selecionada
+def exibir_menu_operacoes_conta(conta_numero):
+    """Exibe o menu de operações para uma conta selecionada."""
+    print(f"\n===== Conta Selecionada: {conta_numero} =====")
+    print("O que você gostaria de fazer?")
+    print("1. 💰 Realizar Depósito")
+    print("2. 💸 Realizar Saque")
+    print("3. 📄 Visualizar Extrato")
+    print("4. ↩️ Voltar para Seleção de Conta")
+    print("==========================================")
+    escolha = input("➡️ Digite o número da opção desejada: ").strip()
+    return escolha
+
+
+# Lógica de execução das opções
+def executar_opcao(escolha, cpf_autenticado, conta_selecionada):
+    """Executa a função correspondente à opção escolhida pelo usuário."""
+    if cpf_autenticado is None: # Pre-authentication options
+        if escolha == "1":
+            cadastrar_cliente()
+        elif escolha == "2":
+            cpf_autenticado = autenticar_cliente()
+        elif escolha == "3": # Sair do Sistema from main menu
+            print("👋 Saindo do sistema. Obrigado por usar nossos serviços!")
+            return None, None # Indicate exit by returning None for both
+        else:
+            print("⚠️ Opção inválida. Por favor, escolha uma opção válida do menu principal (1-3).")
+    else: # Post-authentication options
+        if conta_selecionada is None: # User is authenticated but no account is selected
+            if escolha == "1": # Cadastrar Nova Conta Bancária
+                cadastrar_conta(cpf_autenticado)
+            elif escolha == "2": # Acessar Conta Existente
+                conta_selecionada = selecionar_conta(cpf_autenticado)
+            elif escolha == "6": # Voltar ao Menu Principal (from account management menu)
+                print("↩️ Voltando ao Menu Principal.")
+                cpf_autenticado = None # Reset authentication
+                conta_selecionada = None # Also reset selected account
+            else:
+                 print("⚠️ Por favor, selecione ou cadastre uma conta antes de realizar operações (Opções 1 ou 2).")
+        else: # User is authenticated and an account is selected (Operations menu)
+            if escolha == "1": # Depósito
+                depositar(conta_selecionada)
+            elif escolha == "2": # Saque
+                sacar(conta_selecionada)
+            elif escolha == "3": # Extrato
+                visualizar_extrato(conta_selecionada)
+            elif escolha == "4": # Voltar para Seleção de Conta
+                print("↩️ Voltando para a seleção de contas.")
+                conta_selecionada = None # Reset selected account
+            else:
+                print(f"⚠️ Opção inválida. Por favor, escolha uma opção válida do menu de operações da conta (1-4).")
+
+
+    return cpf_autenticado, conta_selecionada # Return the updated authentication and selected account status
+
+# Main loop
+cpf_autenticado = None
+conta_selecionada = None
+
+while True:
+    if cpf_autenticado is None:
+        opcao = exibir_menu_principal()
+        if opcao == "3":
+             cpf_autenticado, conta_selecionada = executar_opcao(opcao, cpf_autenticado, conta_selecionada)
+             break
+        cpf_autenticado, conta_selecionada = executar_opcao(opcao, cpf_autenticado, conta_selecionada)
+    else:
+        clientes = carregar_json("clientes.json", {})
+        nome_cliente = clientes.get(cpf_autenticado, {}).get("nome", "Cliente")
+        if conta_selecionada is None:
+             opcao = exibir_menu_conta(nome_cliente)
+             cpf_autenticado, conta_selecionada = executar_opcao(opcao, cpf_autenticado, conta_selecionada)
+        else:
+             opcao = exibir_menu_operacoes_conta(conta_selecionada) # Use the new operations menu
+             cpf_autenticado, conta_selecionada = executar_opcao(opcao, cpf_autenticado, conta_selecionada)
