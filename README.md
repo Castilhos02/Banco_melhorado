@@ -94,6 +94,6 @@ Transferências entre contas
 
 👨‍💻 Autor
 
-Desenvolvido por *Douglas Castilho* como projeto do curso de Python da *DIO*.
+Desenvolvido por **Douglas Castilho** como projeto do curso de Python da *DIO*.
 
 ⭐ Se este projeto te ajudou, deixe uma estrela no repositório!
