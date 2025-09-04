@@ -1,41 +1,49 @@
 # 🏦 Banco do Pobre
 
-Um projeto que simula operações bancárias básicas, desenvolvido em **Python** como parte do curso da [Digital Innovation One (DIO)](https://www.dio.me/). Este sistema explora conceitos fundamentais de programação, como estruturas de dados, funções, loops e manipulação de arquivos.
+Este projeto é um sistema bancário simples em **Python**, que permite o cadastro de clientes, criação e gerenciamento de contas bancárias, autenticação, depósitos, saques e visualização de extratos. Projeto desenvolvido para o curso de python da [Digital Innovation One (DIO)](https://www.dio.me/)
+
+Os dados de clientes e contas são armazenados em arquivos **JSON**, garantindo persistência entre execuções.
 
 ---
 
-## 📌 Funcionalidades
+## 🚀 Funcionalidades
 
-- 💰 **Depósito**
-- 💸 **Saque** (com limite diário de R$ 500 e máximo de 3 saques por dia)
-- 📄 **Extrato** (exibe todas as movimentações e saldo atual)
-- 👤 **Cadastro de usuários**
-- 🏢 **Criação de contas correntes** (vinculadas a usuários)
-- 💾 **Persistência de dados** (em arquivo JSON)
-
----
-
-## 🛠️ Tecnologias Utilizadas
-
-- Python 3.10+
-- JSON para armazenamento de dados
-- Biblioteca `datetime` para registro de transações
+- **Cadastro de clientes** (com CPF, nome, endereço e cidade).
+- **Autenticação de clientes** via CPF.
+- **Criação de contas bancárias** com número sequencial único.
+- **Depósitos** em contas.
+- **Saques**, com limite diário configurado (R$ 500,00).
+- **Extrato** com histórico de transações (depósitos e saques), incluindo data e hora de acordo com o fuso horário da cidade do cliente.
+- **Persistência de dados** em arquivos JSON (`clientes.json` e `contas.json`).
 
 ---
 
-## 📦 Estrutura do Projeto
+## 🛠️ Tecnologias utilizadas
 
-banco_do_pobre/ │ ├── main.py # Programa principal ├── dados.json # Arquivo de armazenamento (gerado automaticamente) ├── README.md # Este arquivo └── requirements.txt # Dependências (se necessário)
+- [Python 3](https://www.python.org/)
+- [JSON](https://docs.python.org/3/library/json.html) para armazenamento de dados
+- [Decimal](https://docs.python.org/3/library/decimal.html) para cálculos monetários
+- [pytz](https://pypi.org/project/pytz/) para fuso horário
+
+---
+
+## 📂 Estrutura do Projeto
+
+Banco_melhorado/
+│── script.py # Código principal do sistema
+│── clientes.json # Base de dados de clientes
+│── contas.json # Base de dados de contas
+│── README.md # Documentação do projeto
 
 
 ---
 
-## 🚀 Como Executar
+## ▶️ Como executar
 
-Clone este repositório:
-
-```bash
-git clone https://github.com/seu-usuario/banco-do-pobre.git
+1. Clone este repositório:
+   ```bash
+   git clone https://github.com/Castilhos02/Banco_melhorado.git
+   cd Banco_melhorado
 
 🧠 Conceitos Aplicados
 ✅ Estruturas de controle (if, while, for)
@@ -74,10 +82,10 @@ Fazer pull requests
 📄 Licença
 Este projeto é parte do curso da DIO e está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-👨‍💻 Autor
-Desenvolvido por Douglas Castilho como projeto do curso de Python da DIO.
+==========
 
 🎯 Próximas Melhorias
+
 Interface gráfica com Tkinter
 
 Integração com API de CEP
@@ -85,5 +93,9 @@ Integração com API de CEP
 Histórico de transações por período
 
 Transferências entre contas
+
+👨‍💻 Autor
+
+Desenvolvido por Douglas Castilho como projeto do curso de Python da DIO.
 
 ⭐ Se este projeto te ajudou, deixe uma estrela no repositório!
