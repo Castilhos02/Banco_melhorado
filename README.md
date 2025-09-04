@@ -58,18 +58,16 @@ Banco_melhorado/
 
 ✅ Formatação de strings e números
 
-📝 Exemplo de Uso
+📖 Exemplo de Uso
 
-=============== MENU ===============
-[1] Depositar
-[2] Sacar
-[3] Extrato
-[4] Criar Usuário
-[5] Criar Conta
-[6] Listar Contas
-[7] Sair
-====================================
-====================================
+Menu Principal
+
+===== Bem-vindo ao Banco do Pobre! =====
+1. 📝 Cadastrar Novo Cliente
+2. 🔑 Já sou cliente! Autenticar
+3. 🚪 Sair do Sistema
+
+
 🤝 Contribuição
 Contribuições são bem-vindas! Sinta-se à vontade para:
 
