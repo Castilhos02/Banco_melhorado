@@ -46,6 +46,7 @@ Banco_melhorado/
    cd Banco_melhorado
 
 🧠 Conceitos Aplicados
+
 ✅ Estruturas de controle (if, while, for)
 
 ✅ Funções e modularização
@@ -80,7 +81,6 @@ Fazer pull requests
 📄 Licença
 Este projeto é parte do curso da DIO e está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-==========
 
 🎯 Próximas Melhorias
 
